@@ -6,5 +6,5 @@
 4. Also, user can mark the movie as favorite and check the list of movies marked as favorite.
 
 
-# Click below link to see gif. 
-https://neeraj1988-developer-edition.na59.force.com/apex/MovieFinder
+# Click below link to see demo: 
+https://neeraj1988-developer-edition.na59.force.com/resource/1536816001000/MovieFinder
