@@ -1,62 +1,54 @@
 import { AsyncStorage } from "react-native";
 
-export const fetchMoviesInfo = async query => {
-    const url = "https://itunes.apple.com/search?term=movie";
-    const res = await fetch(url);
-    return await res.json();
-};
+const FAVORITES_KEY = "FAVORITE_MOVIES";
+const ITUNES_SEARCH_URL = "https://itunes.apple.com/search?";
 
+// --- Favorites (persisted locally with AsyncStorage) -----------------------
+
+// Returns the list of favorite track ids, or [] if none / on error.
 export const getKey = async () => {
     try {
-        const value = await AsyncStorage.getItem("FAVORITE_MOVIES");
-        return JSON.parse(value);
+        const value = await AsyncStorage.getItem(FAVORITES_KEY);
+        return JSON.parse(value) || [];
     } catch (error) {
-        console.log("Error retrieving data" + error);
+        console.log("Error retrieving favorites: " + error);
+        return [];
     }
-    return [];
 };
 
-export const setKey = async value => {
+// Toggles a movie's favorite status, persists the new list, and returns it.
+// Centralizes the add/remove logic so the UI doesn't have to duplicate it.
+export const toggleFavorite = async trackId => {
+    const current = await getKey();
+    const next = current.includes(trackId)
+        ? current.filter(id => id !== trackId)
+        : [...current, trackId];
+    const deduped = [...new Set(next)];
     try {
-        const movieKeys = (await getKey()) || [];
-        if (movieKeys.includes(value)) {
-            const filteredKeys = movieKeys.filter(key => key !== value);
-            const filteredKeysAsString = JSON.stringify([
-                ...new Set(filteredKeys)
-            ]);
-            await AsyncStorage.setItem("FAVORITE_MOVIES", filteredKeysAsString);
-
-            const prevFavMovies = (this.state.favMovies || []).filter(
-                key => key !== value
-            );
-            this.setState({ favMovies: [...new Set(prevFavMovies)] });
-            return;
-        }
-        movieKeys.push(value);
-        const updatedValues = JSON.stringify([...new Set(movieKeys)]);
-        await AsyncStorage.setItem("FAVORITE_MOVIES", updatedValues);
-        const prevFavMovies = this.state.favMovies;
-        const favMovies = [...prevFavMovies, value];
-        this.setState({ favMovies: [...new Set(favMovies)] });
+        await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(deduped));
     } catch (error) {
-        console.log("Error saving data" + error);
+        console.log("Error saving favorites: " + error);
     }
+    return deduped;
 };
+
+// --- iTunes search ---------------------------------------------------------
+
+export const endPointURL = query =>
+    query && query.length
+        ? ITUNES_SEARCH_URL + "term=" + query + "&entity=movie"
+        : ITUNES_SEARCH_URL + "term=movie";
 
 export const makeMoviesRequest = async queryParam => {
-    const url = endPointURL(queryParam);
-    const res = await fetch(url);
-    const data = await res.json();
-    return {
-        data: data.results,
-        error: data.error || null,
-        refreshing: false
-    };
-};
-
-export const endPointURL = query => {
-    const url = "https://itunes.apple.com/search?";
-    return query && query.length
-        ? url + ("term=" + query + "&entity=movie")
-        : url + "term=movie";
+    try {
+        const res = await fetch(endPointURL(queryParam));
+        const data = await res.json();
+        return {
+            data: data.results || [],
+            error: data.error || null,
+            refreshing: false
+        };
+    } catch (error) {
+        return { data: [], error: String(error), refreshing: false };
+    }
 };

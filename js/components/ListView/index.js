@@ -4,7 +4,6 @@ import {
     Text,
     View,
     FlatList,
-    AsyncStorage,
     TouchableOpacity
 } from "react-native";
 import { List, ListItem, SearchBar, Icon } from "react-native-elements";
@@ -73,39 +72,8 @@ export default class ListView extends React.Component {
         return (
             <TouchableOpacity
                 onPress={async () => {
-                    const value = item.trackId;
-                    const movieKeys = (await helper.getKey()) || [];
-                    if (movieKeys.includes(value)) {
-                        const filteredKeys = movieKeys.filter(
-                            key => key !== value
-                        );
-                        const filteredKeysAsString = JSON.stringify([
-                            ...new Set(filteredKeys)
-                        ]);
-                        await AsyncStorage.setItem(
-                            "FAVORITE_MOVIES",
-                            filteredKeysAsString
-                        );
-                        const prevFavMovies = (
-                            this.state.favMovies || []
-                        ).filter(key => key !== value);
-                        this.setState({
-                            favMovies: [...new Set(prevFavMovies)]
-                        });
-                        return;
-                    }
-                    movieKeys.push(value);
-                    const updatedValues = JSON.stringify([
-                        ...new Set(movieKeys)
-                    ]);
-                    await AsyncStorage.setItem(
-                        "FAVORITE_MOVIES",
-                        updatedValues
-                    );
-                    const prevFavMovies = this.state.favMovies;
-                    const favMovies = [...prevFavMovies, value];
-                    this.setState({ favMovies: [...new Set(favMovies)] });
-                    // helper.setKey(item.trackId);
+                    const favMovies = await helper.toggleFavorite(item.trackId);
+                    this.setState({ favMovies });
                 }}
             >
                 <View style={styles.imageContainer}>
@@ -152,7 +120,7 @@ export default class ListView extends React.Component {
                     <Text style={styles.titleStyle}>
                         {item.trackCensoredName}
                     </Text>
-                    {this.renderFavoriteIcon(item)};
+                    {this.renderFavoriteIcon(item)}
                 </View>
                 <ListItem
                     subtitle={this.renderListItemSubTitle(item)}
